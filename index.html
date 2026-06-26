@@ -1,0 +1,1948 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Guitar Practice Generator</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+                    sans-serif;
+                background: #0a0a0a;
+                color: #e8e8e8;
+                height: 100vh;
+                display: flex;
+                overflow: hidden;
+            }
+
+            .sidebar {
+                width: 300px;
+                background: #111;
+                border-right: 1px solid #222;
+                padding: 2rem 1.5rem;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .sidebar-exercises {
+                width: 380px;
+                background: #0d0d0d;
+                border-right: 1px solid #222;
+                padding: 2rem 1.5rem;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+            }
+
+            .section-title {
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: #666;
+                margin-bottom: 1rem;
+                font-weight: 600;
+            }
+
+            .preset-selector {
+                display: flex;
+                flex-direction: column;
+                gap: 0.875rem;
+            }
+
+            .preset-btn {
+                position: relative;
+                padding: 1.25rem 1.5rem;
+                border: 2px solid var(--preset-border);
+                background: #0a0a0a;
+                color: var(--preset-color);
+                border-radius: 10px;
+                font-size: 1rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-align: left;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                overflow: hidden;
+            }
+
+            .preset-btn::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(
+                    135deg,
+                    var(--preset-bg-1),
+                    var(--preset-bg-2)
+                );
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 0;
+            }
+
+            .preset-btn:hover::before {
+                opacity: 0.2;
+            }
+
+            .preset-btn.active::before {
+                opacity: 1;
+            }
+
+            .preset-btn::after {
+                content: "";
+                position: absolute;
+                bottom: 8px;
+                right: 8px;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--preset-color);
+                opacity: 0;
+                transform: scale(0);
+                transition: all 0.3s ease;
+                z-index: 2;
+                box-shadow: 0 0 10px var(--preset-color);
+            }
+
+            .preset-btn.active::after {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            .preset-btn.pulse::after {
+                animation: pulse 0.6s ease-out;
+            }
+
+            @keyframes pulse {
+                0% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                50% {
+                    transform: scale(1.5);
+                    opacity: 0.8;
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            .preset-btn[data-preset="beginner"] {
+                --preset-bg-1: #888;
+                --preset-bg-2: #666;
+                --preset-border: #666;
+                --preset-color: #aaa;
+                --preset-glow: rgba(136, 136, 136, 0.3);
+            }
+
+            .preset-btn[data-preset="beginner"].active {
+                --preset-color: #fff;
+                --preset-border: #999;
+            }
+
+            .preset-btn[data-preset="scales-triads"] {
+                --preset-bg-1: #3dd68c;
+                --preset-bg-2: #2ab673;
+                --preset-border: #2ab673;
+                --preset-color: #3dd68c;
+                --preset-glow: rgba(61, 214, 140, 0.4);
+            }
+
+            .preset-btn[data-preset="scales-triads"].active {
+                --preset-color: #fff;
+                --preset-border: #4de89d;
+            }
+
+            .preset-btn[data-preset="harmony"] {
+                --preset-bg-1: #4a9eff;
+                --preset-bg-2: #3182ce;
+                --preset-border: #3182ce;
+                --preset-color: #4a9eff;
+                --preset-glow: rgba(74, 158, 255, 0.4);
+            }
+
+            .preset-btn[data-preset="harmony"].active {
+                --preset-color: #fff;
+                --preset-border: #5aa9ff;
+            }
+
+            .preset-btn[data-preset="advanced"] {
+                --preset-bg-1: #9f7aea;
+                --preset-bg-2: #7c3aed;
+                --preset-border: #7c3aed;
+                --preset-color: #9f7aea;
+                --preset-glow: rgba(159, 122, 234, 0.4);
+            }
+
+            .preset-btn[data-preset="advanced"].active {
+                --preset-color: #fff;
+                --preset-border: #b794f4;
+            }
+
+            .preset-btn.active {
+                transform: scale(1.02);
+                box-shadow:
+                    0 0 30px var(--preset-glow),
+                    0 0 60px var(--preset-glow);
+            }
+
+            .preset-name {
+                font-size: 1.125rem;
+                font-weight: 700;
+                position: relative;
+                z-index: 1;
+            }
+
+            .preset-desc {
+                font-size: 0.875rem;
+                opacity: 0.75;
+                font-weight: 500;
+                line-height: 1.4;
+                position: relative;
+                z-index: 1;
+            }
+
+            .preset-btn.active .preset-desc {
+                opacity: 0.9;
+            }
+
+            .category-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .category-group {
+                border: 1px solid #1a1a1a;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #0a0a0a;
+            }
+
+            .category-header {
+                display: flex;
+                align-items: center;
+                gap: 0.875rem;
+                padding: 0.875rem 1rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                background: #0f0f0f;
+            }
+
+            .category-header:hover {
+                background: #151515;
+            }
+
+            .category-header.active {
+                background: #0f1f2f;
+                border-bottom: 1px solid #1a2a3a;
+            }
+
+            .category-checkbox {
+                width: 18px;
+                height: 18px;
+                border: 2px solid #333;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition: all 0.2s ease;
+            }
+
+            .category-header.active .category-checkbox {
+                background: #4a9eff;
+                border-color: #4a9eff;
+            }
+
+            .category-checkbox::after {
+                content: "✓";
+                color: #0a0a0a;
+                font-size: 0.75rem;
+                font-weight: 700;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+
+            .category-header.active .category-checkbox::after {
+                opacity: 1;
+            }
+
+            .category-label {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #ccc;
+                flex: 1;
+            }
+
+            .category-count {
+                font-size: 0.875rem;
+                color: #666;
+                font-weight: 600;
+            }
+
+            .exercise-list {
+                display: flex;
+                flex-direction: column;
+                background: #0a0a0a;
+            }
+
+            .exercise-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 0.75rem 1rem;
+                padding-left: 3rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border-left: 3px solid transparent;
+            }
+
+            .exercise-item:hover {
+                background: #151515;
+                border-left-color: #333;
+            }
+
+            .exercise-item.active {
+                background: #0f1520;
+                border-left-color: #4a9eff;
+            }
+
+            .exercise-checkbox {
+                width: 14px;
+                height: 14px;
+                border: 2px solid #333;
+                border-radius: 3px;
+                flex-shrink: 0;
+                margin-top: 0.125rem;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .exercise-item.active .exercise-checkbox {
+                background: #4a9eff;
+                border-color: #4a9eff;
+            }
+
+            .exercise-checkbox::after {
+                content: "✓";
+                color: #0a0a0a;
+                font-size: 0.625rem;
+                font-weight: 700;
+                opacity: 0;
+            }
+
+            .exercise-item.active .exercise-checkbox::after {
+                opacity: 1;
+            }
+
+            .exercise-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .exercise-name {
+                font-size: 0.875rem;
+                color: #999;
+                font-weight: 500;
+                line-height: 1.3;
+            }
+
+            .exercise-item.active .exercise-name {
+                color: #ccc;
+                font-weight: 600;
+            }
+
+            .exercise-goal {
+                font-size: 0.75rem;
+                color: #666;
+                line-height: 1.4;
+            }
+
+            .exercise-item.active .exercise-goal {
+                color: #888;
+            }
+
+            .key-selector {
+                display: flex;
+                flex-direction: column;
+                gap: 0.875rem;
+            }
+
+            .key-mode {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .key-mode-btn {
+                flex: 1;
+                padding: 0.5rem;
+                border: 1px solid #222;
+                background: #0a0a0a;
+                color: #888;
+                border-radius: 6px;
+                font-size: 0.8125rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-weight: 500;
+            }
+
+            .key-mode-btn:hover {
+                border-color: #333;
+            }
+
+            .key-mode-btn.active {
+                border-color: #4a9eff;
+                background: #0f1f2f;
+                color: #4a9eff;
+            }
+
+            .key-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+            }
+
+            .key-btn {
+                padding: 0.5rem;
+                border: 1px solid #222;
+                background: #0a0a0a;
+                color: #888;
+                border-radius: 5px;
+                font-size: 0.8125rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-align: center;
+                font-weight: 500;
+            }
+
+            .key-btn:hover {
+                border-color: #333;
+            }
+
+            .key-btn.active {
+                border-color: #4a9eff;
+                background: #0f1f2f;
+                color: #4a9eff;
+            }
+
+            .tonality-selector {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .tonality-options {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .tonality-btn {
+                flex: 1;
+                padding: 0.5rem;
+                border: 1px solid #222;
+                background: #0a0a0a;
+                color: #888;
+                border-radius: 6px;
+                font-size: 0.8125rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-weight: 500;
+            }
+
+            .tonality-btn:hover {
+                border-color: #333;
+            }
+
+            .tonality-btn.active {
+                border-color: #4a9eff;
+                background: #0f1f2f;
+                color: #4a9eff;
+            }
+
+            .mode-selector {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+            }
+
+            .mode-btn {
+                padding: 0.5rem;
+                border: 1px solid #222;
+                background: #0a0a0a;
+                color: #888;
+                border-radius: 5px;
+                font-size: 0.75rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-align: center;
+                font-weight: 500;
+            }
+
+            .mode-btn:hover {
+                border-color: #333;
+            }
+
+            .mode-btn.active {
+                border-color: #9f7aea;
+                background: #1f0f2f;
+                color: #9f7aea;
+            }
+
+            .exercise-count {
+                font-size: 0.9375rem;
+                color: #666;
+                text-align: center;
+                padding: 0.875rem;
+                border-top: 1px solid #1a1a1a;
+                margin-top: auto;
+            }
+
+            .exercise-count span {
+                color: #4a9eff;
+                font-weight: 600;
+            }
+
+            .main-area {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 3rem;
+                position: relative;
+            }
+
+            .exercise-display {
+                max-width: 700px;
+                width: 100%;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .key-display {
+                font-size: 6rem;
+                font-weight: 800;
+                color: #fff;
+                margin-bottom: 1rem;
+                letter-spacing: -0.02em;
+                text-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+            }
+
+            .key-display.na {
+                font-size: 2.5rem;
+                color: #666;
+                text-shadow: none;
+            }
+
+            .tonality-display {
+                font-size: 2.25rem;
+                font-weight: 600;
+                color: #4a9eff;
+                margin-bottom: 2.5rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .exercise-name-display {
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 1.5rem;
+                line-height: 1.2;
+            }
+
+            .exercise-description {
+                font-size: 1.25rem;
+                color: #aaa;
+                margin-bottom: 2.5rem;
+                line-height: 1.6;
+                max-width: 600px;
+            }
+
+            .exercise-meta {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 1.25rem;
+                margin-bottom: 3rem;
+                flex-wrap: wrap;
+            }
+
+            .meta-tag {
+                font-size: 1rem;
+                color: #888;
+                padding: 0.625rem 1.25rem;
+                background: rgba(74, 158, 255, 0.1);
+                border-radius: 24px;
+                border: 1px solid rgba(74, 158, 255, 0.3);
+            }
+
+            .generate-btn {
+                padding: 1.25rem 3.5rem;
+                background: linear-gradient(135deg, #4a9eff, #3182ce);
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                font-size: 1.25rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 8px 30px rgba(74, 158, 255, 0.4);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                position: relative;
+            }
+
+            .generate-btn::after {
+                content: "";
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                width: 10px;
+                height: 10px;
+                background: #4a9eff;
+                border-radius: 50%;
+                opacity: 0;
+                transform: scale(0);
+                transition: all 0.3s ease;
+                box-shadow: 0 0 10px rgba(74, 158, 255, 0.8);
+            }
+
+            .generate-btn.has-changes::after {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            .generate-btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 12px 40px rgba(74, 158, 255, 0.5);
+            }
+
+            .generate-btn:active {
+                transform: translateY(-1px);
+            }
+
+            .quick-actions {
+                display: flex;
+                gap: 1rem;
+                margin-top: 2rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .quick-btn {
+                padding: 0.75rem 1.5rem;
+                background: rgba(255, 255, 255, 0.05);
+                color: #aaa;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-weight: 500;
+            }
+
+            .quick-btn:hover {
+                border-color: #4a9eff;
+                color: #4a9eff;
+                background: rgba(74, 158, 255, 0.1);
+            }
+
+            .mobile-tabs {
+                display: none;
+                background: #111;
+                border-bottom: 1px solid #222;
+                padding: 0;
+                position: relative;
+                touch-action: pan-x;
+            }
+
+            .mobile-tab-buttons {
+                display: flex;
+            }
+
+            .mobile-tab-btn {
+                flex: 1;
+                padding: 1rem;
+                background: transparent;
+                border: none;
+                border-bottom: 2px solid transparent;
+                color: #666;
+                font-size: 0.875rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .mobile-tab-btn.active {
+                color: #4a9eff;
+                border-bottom-color: #4a9eff;
+            }
+
+            @media (max-width: 1024px) {
+                .sidebar {
+                    width: 260px;
+                }
+                .sidebar-exercises {
+                    width: 300px;
+                }
+            }
+
+            @media (max-width: 768px) {
+                body {
+                    flex-direction: column;
+                }
+
+                .mobile-tabs {
+                    display: block;
+                }
+
+                .sidebar,
+                .sidebar-exercises {
+                    display: none;
+                    width: 100%;
+                    max-height: calc(100vh - 60px);
+                    border-right: none;
+                    border-bottom: 1px solid #222;
+                    padding: 1.5rem 1.25rem;
+                }
+
+                .sidebar.active,
+                .sidebar-exercises.active {
+                    display: flex;
+                }
+
+                .main-area {
+                    display: none;
+                    padding: 2rem 1.5rem;
+                    justify-content: flex-start;
+                    padding-top: 3rem;
+                }
+
+                .main-area.active {
+                    display: flex;
+                }
+
+                .key-display {
+                    font-size: 5rem;
+                    margin-bottom: 0.75rem;
+                }
+
+                .tonality-display {
+                    font-size: 1.75rem;
+                    margin-bottom: 2rem;
+                }
+
+                .exercise-name-display {
+                    font-size: 2rem;
+                    margin-bottom: 1.25rem;
+                }
+
+                .exercise-description {
+                    font-size: 1.0625rem;
+                    margin-bottom: 2rem;
+                }
+
+                .exercise-meta {
+                    margin-bottom: 2.5rem;
+                    gap: 0.875rem;
+                }
+
+                .meta-tag {
+                    font-size: 0.875rem;
+                    padding: 0.5rem 1rem;
+                }
+
+                .generate-btn {
+                    padding: 1.125rem 2.5rem;
+                    font-size: 1.125rem;
+                    width: 100%;
+                    max-width: 400px;
+                }
+
+                .quick-actions {
+                    width: 100%;
+                    max-width: 400px;
+                }
+
+                .quick-btn {
+                    flex: 1;
+                    padding: 0.875rem 1rem;
+                    font-size: 0.9375rem;
+                }
+
+                .preset-btn {
+                    padding: 1rem 1.25rem;
+                }
+
+                .preset-name {
+                    font-size: 1rem;
+                }
+
+                .preset-desc {
+                    font-size: 0.8125rem;
+                }
+
+                .mode-selector {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+
+                .exercise-item {
+                    padding: 0.625rem 0.875rem;
+                    padding-left: 2.5rem;
+                }
+
+                .category-header {
+                    padding: 0.75rem 0.875rem;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .key-display {
+                    font-size: 4rem;
+                }
+
+                .tonality-display {
+                    font-size: 1.5rem;
+                }
+
+                .exercise-name-display {
+                    font-size: 1.75rem;
+                }
+
+                .exercise-description {
+                    font-size: 1rem;
+                }
+
+                .quick-actions {
+                    flex-direction: column;
+                }
+
+                .quick-btn {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="mobile-tabs" id="mobileTabs">
+            <div class="mobile-tab-buttons">
+                <button class="mobile-tab-btn active" data-tab="practice">
+                    Practice
+                </button>
+                <button class="mobile-tab-btn" data-tab="settings">
+                    Settings
+                </button>
+                <button class="mobile-tab-btn" data-tab="exercises">
+                    Exercises
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div>
+                <div class="section-title">Practice Mode</div>
+                <div class="preset-selector">
+                    <button class="preset-btn" data-preset="beginner">
+                        <div class="preset-name">Beginner Essentials</div>
+                        <div class="preset-desc">
+                            Learn note locations and basic movement patterns
+                        </div>
+                    </button>
+                    <button
+                        class="preset-btn active"
+                        data-preset="scales-triads"
+                    >
+                        <div class="preset-name">Scales & Triads</div>
+                        <div class="preset-desc">
+                            Master major/minor scales and three-note chord
+                            shapes
+                        </div>
+                    </button>
+                    <button class="preset-btn" data-preset="harmony">
+                        <div class="preset-name">Harmony & Extensions</div>
+                        <div class="preset-desc">
+                            Seventh chords, voice leading, and smooth
+                            connections
+                        </div>
+                    </button>
+                    <button class="preset-btn" data-preset="advanced">
+                        <div class="preset-name">Advanced Integration</div>
+                        <div class="preset-desc">
+                            Full-neck fluency and complex progressions
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">Tonality</div>
+                <div class="tonality-selector">
+                    <div class="tonality-options">
+                        <button
+                            class="tonality-btn active"
+                            data-tonality="major"
+                        >
+                            Major
+                        </button>
+                        <button
+                            class="tonality-btn active"
+                            data-tonality="minor"
+                        >
+                            Minor
+                        </button>
+                    </div>
+                    <div class="mode-selector" style="display: none">
+                        <button class="mode-btn" data-mode="ionian">
+                            Ionian
+                        </button>
+                        <button class="mode-btn" data-mode="dorian">
+                            Dorian
+                        </button>
+                        <button class="mode-btn" data-mode="phrygian">
+                            Phrygian
+                        </button>
+                        <button class="mode-btn" data-mode="lydian">
+                            Lydian
+                        </button>
+                        <button class="mode-btn" data-mode="mixolydian">
+                            Mixolydian
+                        </button>
+                        <button class="mode-btn" data-mode="aeolian">
+                            Aeolian
+                        </button>
+                        <button class="mode-btn" data-mode="locrian">
+                            Locrian
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">Keys</div>
+                <div class="key-selector">
+                    <div class="key-mode">
+                        <button class="key-mode-btn active" data-mode="all">
+                            All Keys
+                        </button>
+                        <button class="key-mode-btn" data-mode="focus">
+                            Focus
+                        </button>
+                        <button class="key-mode-btn" data-mode="avoid">
+                            Avoid
+                        </button>
+                    </div>
+                    <div class="key-grid" style="display: none">
+                        <button class="key-btn" data-key="C">C</button>
+                        <button class="key-btn" data-key="C#/Db">C♯/D♭</button>
+                        <button class="key-btn" data-key="D">D</button>
+                        <button class="key-btn" data-key="D#/Eb">D♯/E♭</button>
+                        <button class="key-btn" data-key="E">E</button>
+                        <button class="key-btn" data-key="F">F</button>
+                        <button class="key-btn" data-key="F#/Gb">F♯/G♭</button>
+                        <button class="key-btn" data-key="G">G</button>
+                        <button class="key-btn" data-key="G#/Ab">G♯/A♭</button>
+                        <button class="key-btn" data-key="A">A</button>
+                        <button class="key-btn" data-key="A#/Bb">A♯/B♭</button>
+                        <button class="key-btn" data-key="B">B</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-exercises">
+            <div class="section-title">Exercise Pool</div>
+            <div class="category-list" id="categoryList"></div>
+            <div class="exercise-count">
+                <span id="availableCount">18</span> exercises available
+            </div>
+        </div>
+
+        <div class="main-area active">
+            <div class="exercise-display">
+                <div class="key-display" id="keyDisplay">—</div>
+                <div class="tonality-display" id="tonalityDisplay"></div>
+                <div class="exercise-name-display" id="exerciseName">
+                    Loading...
+                </div>
+                <div
+                    class="exercise-description"
+                    id="exerciseDescription"
+                ></div>
+                <div class="exercise-meta" id="exerciseMeta"></div>
+
+                <button class="generate-btn" id="generateBtn">Generate</button>
+
+                <div class="quick-actions">
+                    <button class="quick-btn" id="sameKeyBtn">Same Key</button>
+                    <button class="quick-btn" id="sameCategoryBtn">
+                        Same Category
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Exercise Database
+            const exercises = [
+                // Fretboard Mapping
+                {
+                    id: 1,
+                    name: "Name Every Note on One String",
+                    goal: "Build note recognition and fretboard geography",
+                    description:
+                        "Play every note on a single string while saying each note name aloud",
+                    category: "fretboard",
+                    preset: "beginner",
+                    requiresKey: false,
+                    requiresTonality: false,
+                },
+                {
+                    id: 2,
+                    name: "Find All Octaves of a Note",
+                    goal: "Develop pattern recognition across the neck",
+                    description:
+                        "Locate every octave of a given note across all six strings without pausing",
+                    category: "fretboard",
+                    preset: "beginner",
+                    requiresKey: true,
+                    requiresTonality: false,
+                },
+                {
+                    id: 3,
+                    name: "Play One Note Across All Strings",
+                    goal: "Connect the same pitch across different positions",
+                    description:
+                        "Move through all instances of one note (e.g., all C's) from low E to high E",
+                    category: "fretboard",
+                    preset: "scales-triads",
+                    requiresKey: true,
+                    requiresTonality: false,
+                },
+
+                // Scales
+                {
+                    id: 4,
+                    name: "Play Scale in One Position",
+                    goal: "Establish solid foundation in a single scale shape",
+                    description:
+                        "Ascending and descending within one position, no hesitation, even timing",
+                    category: "scales",
+                    preset: "beginner",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 5,
+                    name: "Play Pentatonic Scale Fluently",
+                    goal: "Build smooth movement without string repetition",
+                    description:
+                        "Navigate pentatonic shape while avoiding playing the same string twice in a row",
+                    category: "scales",
+                    preset: "beginner",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 6,
+                    name: "Connect Two Scale Positions",
+                    goal: "Develop seamless position shifting",
+                    description:
+                        "Link two adjacent scale positions smoothly without breaking tempo",
+                    category: "scales",
+                    preset: "scales-triads",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 7,
+                    name: "Sequence Scale in Thirds",
+                    goal: "Internalize intervallic relationships",
+                    description:
+                        "Play scale moving in 3rd intervals (e.g., C-E, D-F, E-G) ascending and descending",
+                    category: "scales",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+
+                // Triads
+                {
+                    id: 8,
+                    name: "Play Triad Through All Inversions",
+                    goal: "Master the three positions of a chord shape",
+                    description:
+                        "Play triad in root position, first inversion, and second inversion on one string set",
+                    category: "triads",
+                    preset: "scales-triads",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 9,
+                    name: "Play All Diatonic Triads in Key",
+                    goal: "Understand harmonic relationships within a key",
+                    description:
+                        "Move through all diatonic triads (I, ii, iii, IV, V, vi, vii°) without leaving your position",
+                    category: "triads",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 10,
+                    name: "Move Triad Across String Sets",
+                    goal: "Connect voicings across the fretboard",
+                    description:
+                        "Play the same triad on different string sets (e.g., strings 654, 543, 432) and link smoothly",
+                    category: "triads",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+
+                // Seventh Chords
+                {
+                    id: 11,
+                    name: "Play All Diatonic Seventh Chords",
+                    goal: "Extend harmonic vocabulary beyond triads",
+                    description:
+                        "Play all seven seventh chords in the key sequentially",
+                    category: "sevenths",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 12,
+                    name: "Arpeggiate Dominant Seventh",
+                    goal: "Melodically outline four-note chords",
+                    description:
+                        "Play root, 3rd, 5th, 7th of a dominant seventh chord across two positions",
+                    category: "sevenths",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: false,
+                },
+                {
+                    id: 13,
+                    name: "Convert Triads to Seventh Chords",
+                    goal: "Understand how to extend basic harmony",
+                    description:
+                        "Play each diatonic triad, then immediately add the seventh to create the full chord",
+                    category: "sevenths",
+                    preset: "advanced",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+
+                // Voice Leading
+                {
+                    id: 14,
+                    name: "Connect Chords with Minimal Movement",
+                    goal: "Develop smooth, economical voice leading",
+                    description:
+                        "Move between chord changes using the smallest possible finger movements",
+                    category: "voicing",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 15,
+                    name: "Hold Common Tones Between Chords",
+                    goal: "Create continuity in harmonic motion",
+                    description:
+                        "Identify notes shared between chords and hold them steady while changing other voices",
+                    category: "voicing",
+                    preset: "advanced",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 16,
+                    name: "Play Progression with Guide Tones",
+                    goal: "Focus on essential harmonic movement",
+                    description:
+                        "Play a chord progression using only the 3rd and 7th of each chord",
+                    category: "voicing",
+                    preset: "advanced",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+
+                // Arpeggiation
+                {
+                    id: 17,
+                    name: "Arpeggiate Triad in One Position",
+                    goal: "Play chord tones melodically instead of vertically",
+                    description:
+                        "Play each note of a triad individually across one position, treating the chord as a melody",
+                    category: "arpeggios",
+                    preset: "scales-triads",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 18,
+                    name: "Extend Arpeggio Across Two Octaves",
+                    goal: "Navigate wider fretboard spans",
+                    description:
+                        "Play triad arpeggio across two full octaves without repeating the same note",
+                    category: "arpeggios",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+
+                // Progressions
+                {
+                    id: 19,
+                    name: "Play ii-V-I with Inversions",
+                    goal: "Master jazz's most common progression",
+                    description:
+                        "Play ii-V-I using only chord inversions, staying within one position",
+                    category: "progression",
+                    preset: "harmony",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 20,
+                    name: "Move Through Circle of Fifths",
+                    goal: "Navigate all keys through descending fifths",
+                    description:
+                        "Play diatonic chords in circle-of-fifths order",
+                    category: "progression",
+                    preset: "advanced",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+                {
+                    id: 21,
+                    name: "Play I-vi-ii-V Without Repeating Shapes",
+                    goal: "Develop voicing variety and creativity",
+                    description:
+                        "Play this classic progression using different voicing shapes each time",
+                    category: "progression",
+                    preset: "advanced",
+                    requiresKey: true,
+                    requiresTonality: true,
+                },
+            ];
+
+            const categories = {
+                fretboard: "Fretboard Mapping",
+                scales: "Scales & Movement",
+                triads: "Triads",
+                sevenths: "Seventh Chords",
+                voicing: "Voice Leading",
+                arpeggios: "Arpeggiation",
+                progression: "Progressions",
+            };
+
+            const presets = {
+                beginner: {
+                    categories: ["fretboard", "scales"],
+                    exercises: [1, 2, 4, 5],
+                    name: "Beginner Essentials",
+                },
+                "scales-triads": {
+                    categories: ["fretboard", "scales", "triads", "arpeggios"],
+                    exercises: [3, 4, 5, 8, 17],
+                    name: "Scales & Triads",
+                },
+                harmony: {
+                    categories: [
+                        "scales",
+                        "triads",
+                        "sevenths",
+                        "voicing",
+                        "arpeggios",
+                        "progression",
+                    ],
+                    exercises: [6, 7, 9, 10, 11, 12, 14, 18, 19],
+                    name: "Harmony & Extensions",
+                },
+                advanced: {
+                    categories: [
+                        "sevenths",
+                        "voicing",
+                        "arpeggios",
+                        "progression",
+                    ],
+                    exercises: [13, 15, 16, 20, 21],
+                    name: "Advanced Integration",
+                },
+            };
+
+            // Pitch classes for key generation
+            const pitchClasses = [
+                ["C"],
+                ["C#", "Db"],
+                ["D"],
+                ["D#", "Eb"],
+                ["E"],
+                ["F"],
+                ["F#", "Gb"],
+                ["G"],
+                ["G#", "Ab"],
+                ["A"],
+                ["A#", "Bb"],
+                ["B"],
+            ];
+
+            // State
+            let state = {
+                preset: "scales-triads",
+                categories: new Set([
+                    "fretboard",
+                    "scales",
+                    "triads",
+                    "arpeggios",
+                ]),
+                enabledExercises: new Set([3, 4, 5, 8, 17]),
+                tonalities: new Set(["major", "minor"]),
+                modes: new Set(),
+                keyMode: "all",
+                selectedKeys: new Set(),
+                history: [],
+                currentExercise: null,
+                currentKey: null,
+                currentTonality: null,
+            };
+
+            // Mobile swipe handling
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const tabs = ["practice", "settings", "exercises"];
+            let currentTabIndex = 0;
+
+            function handleSwipe() {
+                const diff = touchStartX - touchEndX;
+                if (Math.abs(diff) > 50) {
+                    // Minimum swipe distance
+                    if (diff > 0 && currentTabIndex < tabs.length - 1) {
+                        // Swipe left - next tab
+                        currentTabIndex++;
+                        switchToTab(tabs[currentTabIndex]);
+                    } else if (diff < 0 && currentTabIndex > 0) {
+                        // Swipe right - previous tab
+                        currentTabIndex--;
+                        switchToTab(tabs[currentTabIndex]);
+                    }
+                }
+            }
+
+            function switchToTab(tab) {
+                currentTabIndex = tabs.indexOf(tab);
+
+                // Update button states
+                document
+                    .querySelectorAll(".mobile-tab-btn")
+                    .forEach((b) => b.classList.remove("active"));
+                document
+                    .querySelector(`.mobile-tab-btn[data-tab="${tab}"]`)
+                    .classList.add("active");
+
+                // Hide all sections
+                document.querySelector(".sidebar").classList.remove("active");
+                document
+                    .querySelector(".sidebar-exercises")
+                    .classList.remove("active");
+                document.querySelector(".main-area").classList.remove("active");
+
+                // Show selected section
+                if (tab === "practice") {
+                    document
+                        .querySelector(".main-area")
+                        .classList.add("active");
+                } else if (tab === "settings") {
+                    document.querySelector(".sidebar").classList.add("active");
+                } else if (tab === "exercises") {
+                    document
+                        .querySelector(".sidebar-exercises")
+                        .classList.add("active");
+                }
+            }
+
+            // Mobile tab switching
+            document.querySelectorAll(".mobile-tab-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    switchToTab(btn.dataset.tab);
+                });
+            });
+
+            // Add touch event listeners
+            const mobileTabs = document.getElementById("mobileTabs");
+            document.body.addEventListener("touchstart", (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            document.body.addEventListener("touchend", (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            // Show notification
+            function showChangeIndicator() {
+                const generateBtn = document.getElementById("generateBtn");
+                generateBtn.classList.add("has-changes");
+            }
+
+            function hideChangeIndicator() {
+                const generateBtn = document.getElementById("generateBtn");
+                generateBtn.classList.remove("has-changes");
+            }
+
+            // Build category list with exercises
+            function buildCategoryList() {
+                const categoryList = document.getElementById("categoryList");
+                categoryList.innerHTML = "";
+
+                const activeCategories = state.categories;
+
+                Object.entries(categories).forEach(([key, name]) => {
+                    const categoryExercises = exercises.filter(
+                        (e) => e.category === key,
+                    );
+                    const enabledCount = categoryExercises.filter(
+                        (e) =>
+                            state.enabledExercises.has(e.id) &&
+                            activeCategories.has(key),
+                    ).length;
+
+                    const categoryGroup = document.createElement("div");
+                    categoryGroup.className = "category-group";
+
+                    const categoryHeader = document.createElement("div");
+                    categoryHeader.className = `category-header ${activeCategories.has(key) ? "active" : ""}`;
+                    categoryHeader.innerHTML = `
+                    <div class="category-checkbox"></div>
+                    <div class="category-label">${name}</div>
+                    <div class="category-count">${enabledCount}/${categoryExercises.length}</div>
+                `;
+
+                    categoryHeader.addEventListener("click", () => {
+                        toggleCategory(key);
+                    });
+
+                    const exerciseList = document.createElement("div");
+                    exerciseList.className = "exercise-list";
+
+                    categoryExercises.forEach((exercise) => {
+                        const isEnabled =
+                            state.enabledExercises.has(exercise.id) &&
+                            activeCategories.has(key);
+
+                        const exerciseItem = document.createElement("div");
+                        exerciseItem.className = `exercise-item ${isEnabled ? "active" : ""}`;
+                        exerciseItem.innerHTML = `
+                        <div class="exercise-checkbox"></div>
+                        <div class="exercise-content">
+                            <div class="exercise-name">${exercise.name}</div>
+                            <div class="exercise-goal">${exercise.goal}</div>
+                        </div>
+                    `;
+
+                        exerciseItem.addEventListener("click", () => {
+                            toggleExercise(exercise.id);
+                        });
+
+                        exerciseList.appendChild(exerciseItem);
+                    });
+
+                    categoryGroup.appendChild(categoryHeader);
+                    categoryGroup.appendChild(exerciseList);
+                    categoryList.appendChild(categoryGroup);
+                });
+            }
+
+            function setPreset(presetName) {
+                state.preset = presetName;
+
+                const preset = presets[presetName];
+                state.categories = new Set(preset.categories);
+                state.enabledExercises = new Set(preset.exercises);
+
+                // Show mode selector only for advanced preset
+                const modeSelector = document.querySelector(".mode-selector");
+                if (presetName === "advanced") {
+                    modeSelector.style.display = "grid";
+                } else {
+                    modeSelector.style.display = "none";
+                    state.modes.clear();
+                    document
+                        .querySelectorAll(".mode-btn")
+                        .forEach((btn) => btn.classList.remove("active"));
+                }
+
+                buildCategoryList();
+                updateExerciseCount();
+                saveState();
+
+                // Add pulse animation to preset button
+                const presetBtn = document.querySelector(
+                    `.preset-btn[data-preset="${presetName}"]`,
+                );
+                presetBtn.classList.add("pulse");
+                setTimeout(() => presetBtn.classList.remove("pulse"), 600);
+
+                // Auto-generate new exercise when preset changes
+                generateExercise();
+            }
+
+            function clearPreset() {
+                state.preset = null;
+                document
+                    .querySelectorAll(".preset-btn")
+                    .forEach((b) => b.classList.remove("active"));
+            }
+
+            function toggleCategory(category) {
+                clearPreset();
+
+                if (state.categories.has(category)) {
+                    state.categories.delete(category);
+                } else {
+                    state.categories.add(category);
+                }
+
+                buildCategoryList();
+                updateExerciseCount();
+                saveState();
+                showChangeIndicator();
+            }
+
+            function toggleExercise(exerciseId) {
+                clearPreset();
+
+                if (state.enabledExercises.has(exerciseId)) {
+                    state.enabledExercises.delete(exerciseId);
+                } else {
+                    state.enabledExercises.add(exerciseId);
+                }
+
+                buildCategoryList();
+                updateExerciseCount();
+                saveState();
+                showChangeIndicator();
+            }
+
+            // Load state from localStorage
+            function loadState() {
+                const saved = localStorage.getItem("guitarPracticeState");
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.preset = parsed.preset || null;
+                    state.categories = new Set(parsed.categories || []);
+                    state.enabledExercises = new Set(
+                        parsed.enabledExercises || [],
+                    );
+                    state.tonalities = new Set(
+                        parsed.tonalities || ["major", "minor"],
+                    );
+                    state.modes = new Set(parsed.modes || []);
+                    state.keyMode = parsed.keyMode || "all";
+                    state.selectedKeys = new Set(parsed.selectedKeys || []);
+
+                    // Update UI
+                    if (state.preset) {
+                        document
+                            .querySelectorAll(".preset-btn")
+                            .forEach((btn) => {
+                                btn.classList.toggle(
+                                    "active",
+                                    btn.dataset.preset === state.preset,
+                                );
+                            });
+
+                        // Show mode selector if advanced
+                        if (state.preset === "advanced") {
+                            document.querySelector(
+                                ".mode-selector",
+                            ).style.display = "grid";
+                        }
+                    }
+
+                    document
+                        .querySelectorAll(".tonality-btn")
+                        .forEach((btn) => {
+                            btn.classList.toggle(
+                                "active",
+                                state.tonalities.has(btn.dataset.tonality),
+                            );
+                        });
+
+                    document.querySelectorAll(".mode-btn").forEach((btn) => {
+                        btn.classList.toggle(
+                            "active",
+                            state.modes.has(btn.dataset.mode),
+                        );
+                    });
+
+                    document
+                        .querySelectorAll(".key-mode-btn")
+                        .forEach((btn) => {
+                            btn.classList.toggle(
+                                "active",
+                                btn.dataset.mode === state.keyMode,
+                            );
+                        });
+
+                    if (state.keyMode !== "all") {
+                        document.querySelector(".key-grid").style.display =
+                            "grid";
+                    }
+
+                    document.querySelectorAll(".key-btn").forEach((btn) => {
+                        btn.classList.toggle(
+                            "active",
+                            state.selectedKeys.has(btn.dataset.key),
+                        );
+                    });
+                } else {
+                    setPreset(state.preset);
+                }
+
+                buildCategoryList();
+                updateExerciseCount();
+            }
+
+            // Save state to localStorage
+            function saveState() {
+                localStorage.setItem(
+                    "guitarPracticeState",
+                    JSON.stringify({
+                        preset: state.preset,
+                        categories: Array.from(state.categories),
+                        enabledExercises: Array.from(state.enabledExercises),
+                        tonalities: Array.from(state.tonalities),
+                        modes: Array.from(state.modes),
+                        keyMode: state.keyMode,
+                        selectedKeys: Array.from(state.selectedKeys),
+                    }),
+                );
+            }
+
+            // Get available exercises based on filters
+            function getAvailableExercises() {
+                return exercises.filter(
+                    (ex) =>
+                        state.enabledExercises.has(ex.id) &&
+                        state.categories.has(ex.category),
+                );
+            }
+
+            // Update exercise count display
+            function updateExerciseCount() {
+                const count = getAvailableExercises().length;
+                document.getElementById("availableCount").textContent = count;
+            }
+
+            // Generate random key
+            function generateKey() {
+                if (state.keyMode === "all") {
+                    const pitchClass =
+                        pitchClasses[
+                            Math.floor(Math.random() * pitchClasses.length)
+                        ];
+                    return pitchClass[
+                        Math.floor(Math.random() * pitchClass.length)
+                    ];
+                } else if (state.keyMode === "focus") {
+                    if (state.selectedKeys.size === 0) return null;
+                    const keys = Array.from(state.selectedKeys);
+                    return keys[Math.floor(Math.random() * keys.length)];
+                } else if (state.keyMode === "avoid") {
+                    const availableClasses = pitchClasses.filter((pc) => {
+                        return !pc.some((key) => state.selectedKeys.has(key));
+                    });
+                    if (availableClasses.length === 0) return null;
+                    const pitchClass =
+                        availableClasses[
+                            Math.floor(Math.random() * availableClasses.length)
+                        ];
+                    return pitchClass[
+                        Math.floor(Math.random() * pitchClass.length)
+                    ];
+                }
+            }
+
+            // Generate random tonality
+            function generateTonality() {
+                // If modes are selected, use those
+                if (state.modes.size > 0) {
+                    const modes = Array.from(state.modes);
+                    return modes[Math.floor(Math.random() * modes.length)];
+                }
+
+                // Otherwise use tonalities
+                if (state.tonalities.size === 0) return "Major";
+                const tonalities = Array.from(state.tonalities);
+                const tonality =
+                    tonalities[Math.floor(Math.random() * tonalities.length)];
+                return tonality === "major" ? "Major" : "Minor";
+            }
+
+            // Generate exercise
+            function generateExercise(options = {}) {
+                const available = getAvailableExercises();
+
+                if (available.length === 0) {
+                    displayError("No exercises available with current filters");
+                    return;
+                }
+
+                // Filter by options
+                let pool = available;
+
+                if (options.sameCategory && state.currentExercise) {
+                    pool = available.filter(
+                        (ex) => ex.category === state.currentExercise.category,
+                    );
+                }
+
+                // Remove recent history
+                pool = pool.filter((ex) => !state.history.includes(ex.id));
+
+                // If pool too small, clear some history
+                if (pool.length === 0) {
+                    state.history = state.history.slice(-3);
+                    pool = available.filter(
+                        (ex) => !state.history.includes(ex.id),
+                    );
+                }
+
+                // If still no pool, use all available
+                if (pool.length === 0) {
+                    pool = available;
+                    state.history = [];
+                }
+
+                // Select exercise
+                const exercise = pool[Math.floor(Math.random() * pool.length)];
+
+                // Generate key
+                let key = null;
+                if (exercise.requiresKey) {
+                    if (options.sameKey && state.currentKey) {
+                        key = state.currentKey;
+                    } else {
+                        key = generateKey();
+                        if (!key) {
+                            displayError(
+                                "No keys available with current filter",
+                            );
+                            return;
+                        }
+                    }
+                }
+
+                // Generate tonality
+                let tonality = null;
+                if (exercise.requiresTonality) {
+                    tonality = generateTonality();
+                }
+
+                // Update state
+                state.currentExercise = exercise;
+                state.currentKey = key;
+                state.currentTonality = tonality;
+                state.history.push(exercise.id);
+                if (state.history.length > 8) {
+                    state.history.shift();
+                }
+
+                // Display
+                displayExercise(exercise, key, tonality);
+            }
+
+            // Display exercise
+            function displayExercise(exercise, key, tonality) {
+                const keyDisplay = document.getElementById("keyDisplay");
+                const tonalityDisplay =
+                    document.getElementById("tonalityDisplay");
+                const exerciseName = document.getElementById("exerciseName");
+                const exerciseDescription = document.getElementById(
+                    "exerciseDescription",
+                );
+                const exerciseMeta = document.getElementById("exerciseMeta");
+
+                // Key
+                if (key) {
+                    keyDisplay.textContent = key;
+                    keyDisplay.className = "key-display";
+                } else {
+                    keyDisplay.textContent = "—";
+                    keyDisplay.className = "key-display na";
+                }
+
+                // Tonality
+                if (tonality) {
+                    tonalityDisplay.textContent = tonality;
+                    tonalityDisplay.style.display = "block";
+                } else {
+                    tonalityDisplay.textContent = "";
+                    tonalityDisplay.style.display = "none";
+                }
+
+                // Exercise details
+                exerciseName.textContent = exercise.name;
+                exerciseDescription.textContent = exercise.description;
+
+                // Meta tags
+                exerciseMeta.innerHTML = `
+                <div class="meta-tag">${categories[exercise.category]}</div>
+                <div class="meta-tag">${exercise.goal}</div>
+            `;
+            }
+
+            // Display error
+            function displayError(message) {
+                const keyDisplay = document.getElementById("keyDisplay");
+                const tonalityDisplay =
+                    document.getElementById("tonalityDisplay");
+                const exerciseName = document.getElementById("exerciseName");
+                const exerciseDescription = document.getElementById(
+                    "exerciseDescription",
+                );
+                const exerciseMeta = document.getElementById("exerciseMeta");
+
+                keyDisplay.textContent = "!";
+                keyDisplay.className = "key-display na";
+                tonalityDisplay.textContent = "";
+                tonalityDisplay.style.display = "none";
+                exerciseName.textContent = message;
+                exerciseDescription.textContent = "";
+                exerciseMeta.innerHTML = "";
+            }
+
+            // Event Listeners
+            document.querySelectorAll(".preset-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const preset = btn.dataset.preset;
+                    document
+                        .querySelectorAll(".preset-btn")
+                        .forEach((b) => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    setPreset(preset);
+                });
+            });
+
+            document.querySelectorAll(".tonality-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const tonality = btn.dataset.tonality;
+                    if (state.tonalities.has(tonality)) {
+                        // Don't allow deselecting both
+                        if (state.tonalities.size > 1) {
+                            state.tonalities.delete(tonality);
+                            btn.classList.remove("active");
+                        }
+                    } else {
+                        state.tonalities.add(tonality);
+                        btn.classList.add("active");
+                    }
+                    saveState();
+                    showChangeIndicator();
+                });
+            });
+
+            document.querySelectorAll(".mode-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const mode = btn.dataset.mode;
+                    if (state.modes.has(mode)) {
+                        state.modes.delete(mode);
+                        btn.classList.remove("active");
+                    } else {
+                        state.modes.add(mode);
+                        btn.classList.add("active");
+                    }
+                    saveState();
+                    showChangeIndicator();
+                });
+            });
+
+            document.querySelectorAll(".key-mode-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    state.keyMode = btn.dataset.mode;
+                    document
+                        .querySelectorAll(".key-mode-btn")
+                        .forEach((b) => b.classList.remove("active"));
+                    btn.classList.add("active");
+
+                    const keyGrid = document.querySelector(".key-grid");
+                    if (state.keyMode === "all") {
+                        keyGrid.style.display = "none";
+                        state.selectedKeys.clear();
+                    } else {
+                        keyGrid.style.display = "grid";
+                    }
+                    saveState();
+                    showChangeIndicator();
+                });
+            });
+
+            document.querySelectorAll(".key-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const key = btn.dataset.key;
+                    if (state.selectedKeys.has(key)) {
+                        state.selectedKeys.delete(key);
+                        btn.classList.remove("active");
+                    } else {
+                        state.selectedKeys.add(key);
+                        btn.classList.add("active");
+                    }
+                    saveState();
+                    showChangeIndicator();
+                });
+            });
+
+            document
+                .getElementById("generateBtn")
+                .addEventListener("click", () => {
+                    generateExercise();
+                    hideChangeIndicator();
+                });
+
+            document
+                .getElementById("sameKeyBtn")
+                .addEventListener("click", () => {
+                    generateExercise({ sameKey: true });
+                });
+
+            document
+                .getElementById("sameCategoryBtn")
+                .addEventListener("click", () => {
+                    generateExercise({ sameCategory: true });
+                });
+
+            // Initialize
+            loadState();
+            generateExercise();
+        </script>
+    </body>
+</html>
