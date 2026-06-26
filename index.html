@@ -1717,29 +1717,40 @@
                     pool = available.filter(
                         (ex) => ex.category === state.currentExercise.category,
                     );
+
+                    // If no exercises in same category, show error
+                    if (pool.length === 0) {
+                        displayError("No other exercises in this category");
+                        return;
+                    }
                 }
 
                 // Remove recent history
-                pool = pool.filter((ex) => !state.history.includes(ex.id));
+                let filteredPool = pool.filter(
+                    (ex) => !state.history.includes(ex.id),
+                );
 
-                // If pool too small, clear some history
-                if (pool.length === 0) {
+                // If pool too small, clear some history and retry
+                if (filteredPool.length === 0) {
                     state.history = state.history.slice(-3);
-                    pool = available.filter(
+                    filteredPool = pool.filter(
                         (ex) => !state.history.includes(ex.id),
                     );
                 }
 
-                // If still no pool, use all available
-                if (pool.length === 0) {
-                    pool = available;
+                // If still no pool, use the full pool (respecting category filter if set)
+                if (filteredPool.length === 0) {
+                    filteredPool = pool;
                     state.history = [];
                 }
 
                 // Select exercise
-                const exercise = pool[Math.floor(Math.random() * pool.length)];
+                const exercise =
+                    filteredPool[
+                        Math.floor(Math.random() * filteredPool.length)
+                    ];
 
-                // Generate key
+                // Generate key - preserve currentKey if sameKey option and exercise doesn't need a key
                 let key = null;
                 if (exercise.requiresKey) {
                     if (options.sameKey && state.currentKey) {
@@ -1753,6 +1764,13 @@
                             return;
                         }
                     }
+                } else if (options.sameKey && state.currentKey) {
+                    // Exercise doesn't need a key, but preserve currentKey for next time
+                    key = null; // Don't display key
+                    // Don't update state.currentKey - keep the previous one
+                } else {
+                    // Regular keyless exercise, clear the key
+                    key = null;
                 }
 
                 // Generate tonality
@@ -1761,9 +1779,11 @@
                     tonality = generateTonality();
                 }
 
-                // Update state
+                // Update state - only update currentKey if not using sameKey or exercise requires key
                 state.currentExercise = exercise;
-                state.currentKey = key;
+                if (exercise.requiresKey || !options.sameKey) {
+                    state.currentKey = key;
+                }
                 state.currentTonality = tonality;
                 state.history.push(exercise.id);
                 if (state.history.length > 8) {
